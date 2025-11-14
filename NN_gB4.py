@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 from torch import nn
+from torch.nn.functional import dropout
 from torch.utils.data import DataLoader, TensorDataset
 
 import pandas as pd
@@ -36,11 +37,13 @@ val_loader   = DataLoader(val_ds, batch_size=32)
 test_loader  = DataLoader(test_ds, batch_size=32)
 
 model = nn.Sequential(
-    nn.Linear(X_train.shape[1], 128),
+    nn.Linear(X_train.shape[1], 256),
     nn.ReLU(),
-    nn.Linear(128, 64),
+    nn.Dropout(0.1),
+
+    nn.Linear(256, 128),
     nn.ReLU(),
-    nn.Linear(64, 1)
+    nn.Linear(128, 1)
 )
 
 criterion = nn.MSELoss()
