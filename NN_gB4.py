@@ -1,0 +1,84 @@
+import pandas as pd
+import torch
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
+
+
+X_train = pd.read_csv("train_reduced_gB4.csv")
+Y_train = pd.read_csv("train_target_gB4.csv")
+
+X_val = pd.read_csv("validation_reduced_gB4.csv")
+Y_val = pd.read_csv("validation_target_gB4.csv")
+
+X_test = pd.read_csv("test_reduced_gB4.csv")
+Y_test = pd.read_csv("test_target_gB4.csv")
+
+
+X_train_t = torch.tensor(X_train.values, dtype=torch.float32)
+Y_train_t = torch.tensor(Y_train.values, dtype=torch.float32).view(-1, 1)
+
+X_val_t = torch.tensor(X_val.values, dtype=torch.float32)
+Y_val_t = torch.tensor(Y_val.values, dtype=torch.float32).view(-1, 1)
+
+X_test_t = torch.tensor(X_test.values, dtype=torch.float32)
+Y_test_t = torch.tensor(Y_test.values, dtype=torch.float32).view(-1, 1)
+
+
+train_ds = TensorDataset(X_train_t, Y_train_t)
+val_ds   = TensorDataset(X_val_t, Y_val_t)
+test_ds  = TensorDataset(X_test_t, Y_test_t)
+
+train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
+val_loader   = DataLoader(val_ds, batch_size=32)
+test_loader  = DataLoader(test_ds, batch_size=32)
+
+model = nn.Sequential(
+    nn.Linear(X_train.shape[1], 128),
+    nn.ReLU(),
+    nn.Linear(128, 64),
+    nn.ReLU(),
+    nn.Linear(64, 1)
+)
+
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+EPOCHS = 50
+
+for epoch in range(EPOCHS):
+    model.train()
+    train_loss = 0
+
+    for Xb, Yb in train_loader:
+        optimizer.zero_grad()
+        preds = model(Xb)
+        loss = criterion(preds, Yb)
+        loss.backward()
+        optimizer.step()
+        train_loss += loss.item()
+
+    # Validation
+    model.eval()
+    val_loss = 0
+    with torch.no_grad():
+        for Xb, Yb in val_loader:
+            preds = model(Xb)
+            val_loss += criterion(preds, Yb).item()
+
+    print(f"Epoch {epoch+1}/{EPOCHS} - Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+
+model.eval()
+test_loss = 0
+
+with torch.no_grad():
+    for Xb, Yb in test_loader:
+        preds = model(Xb)
+        test_loss += criterion(preds, Yb).item()
+
+print("Final Test MSE:", test_loss)
+
+
+model.eval()
+preds = model(X_test_t).detach().numpy()
+
+pd.DataFrame(preds, columns=["pred_band_gap"]).to_csv("NN_pred_gB4.csv", index=False)
