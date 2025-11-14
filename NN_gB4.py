@@ -3,6 +3,9 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
+import pandas as pd
+import matplotlib.pyplot as plt
+
 
 X_train = pd.read_csv("train_reduced_gB4.csv")
 Y_train = pd.read_csv("train_target_gB4.csv")
@@ -82,3 +85,44 @@ model.eval()
 preds = model(X_test_t).detach().numpy()
 
 pd.DataFrame(preds, columns=["pred_band_gap"]).to_csv("NN_pred_gB4.csv", index=False)
+
+
+# Load predictions and true values
+preds = pd.read_csv("NN_pred_gB4.csv")
+true  = pd.read_csv("test_target_gB4.csv")
+
+plt.figure(figsize=(6, 6))
+plt.scatter(true, preds, alpha=0.6)
+plt.plot([true.min()[0], true.max()[0]],
+         [true.min()[0], true.max()[0]],
+         linestyle='--')  # 1:1 line
+
+plt.xlabel("True band_gap")
+plt.ylabel("Predicted band_gap")
+plt.title("Neural Network Predictions vs True Values")
+plt.grid(True)
+plt.show()
+
+residuals = preds.values.flatten() - true.values.flatten()
+
+plt.figure(figsize=(6, 4))
+plt.scatter(true, residuals, alpha=0.6)
+plt.axhline(0, linestyle='--', color='black')
+
+plt.xlabel("True band_gap")
+plt.ylabel("Prediction Error (Pred - True)")
+plt.title("Residual Plot")
+plt.grid(True)
+plt.show()
+
+plt.figure(figsize=(6,4))
+
+plt.hist(true, bins=30, alpha=0.6, label="True")
+plt.hist(preds, bins=30, alpha=0.6, label="Predicted")
+
+plt.legend()
+plt.xlabel("band_gap")
+plt.ylabel("Count")
+plt.title("True vs Predicted Distribution")
+plt.grid(True)
+plt.show()
